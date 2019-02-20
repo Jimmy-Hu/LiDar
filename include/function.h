@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <future>
-#include <librealsense2/rs.hpp>
-#include <librealsense2/rsutil.h>
+//#include <librealsense2/rs.hpp>
+//#include <librealsense2/rsutil.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/features/normal_3d.h>
@@ -139,16 +139,6 @@ namespace myFunction
 		rotateZ(point.x, point.y, point.z, angle);
 	}
 
-	template<typename Type>
-	std::string commaFix(const Type &input)		//1000000 -> 1,000,000
-	{
-        std::stringstream ss;
-        ss.imbue(std::locale(""));
-        ss << std::fixed << input;
-        
-		return ss.str();
-	}
-
 	bool fileExists(const std::string &filename)
 	{
 		struct stat buffer;
@@ -162,12 +152,6 @@ namespace myFunction
 
 		return mesh;
 	}
-
-	template<typename RandomIt1, typename RandomIt2> 
-	int getDivNum(const RandomIt1 &total, const RandomIt2 part = (RandomIt2)(std::thread::hardware_concurrency()+1))
-	{
-		return std::ceil((double)(total)/(double)(part));
-	}		
 
 #pragma endregion basic
 	
@@ -565,7 +549,7 @@ namespace myFunction
         int division_num = getDivNum<size_t, size_t>(cloud_in->points.size());
 		
 		cloud_out->points = XYZ_to_XYZRGBPart(division_num, min_Distance, div, gray, cloud_in->points.begin(), cloud_in->points.end());
-		cloud_out->width = (int) cloud_out->points.size();
+		cloud_out->width = static_cast<uint32_t>(cloud_out->points.size());
 		cloud_out->height = 1;
 
 		return cloud_out;
@@ -623,7 +607,7 @@ namespace myFunction
 			out->points.push_back (point);
 		}
 		
-		out->width = (int) out->points.size();
+		out->width = static_cast<uint32_t>(out->points.size());
 		out->height = 1;
 
 		return out;
@@ -670,9 +654,9 @@ namespace myFunction
 		
 		PointT out = getOriginPart<decltype(cloud->points.begin()), PointT>(division_num, cloud->points.begin(), cloud->points.end());
 		
-		out.x = out.x / (double)cloud->points.size();
-		out.y = out.y / (double)cloud->points.size();
-		out.z = out.z / (double)cloud->points.size();
+		out.x = out.x / static_cast<double>(cloud->points.size());
+		out.y = out.y / static_cast<double>(cloud->points.size());
+		out.z = out.z / static_cast<double>(cloud->points.size());
 
 		return out;
 	}
@@ -714,35 +698,8 @@ namespace myFunction
 	}
 
 #pragma endregion offsetToOrigin
-	
+	/*
 #pragma region points_to_pcl
-
-	template<typename RandomIt, typename RandomIt2>
-	int points_to_pclPart(const int &division_num, RandomIt2 ptr, const RandomIt &beg, const RandomIt &end)
-	{
-		auto len = end - beg;
-
-		if(len < division_num)
-		{
-			int out;
-			for(auto it = beg; it != end; ++it)
-			{
-				(*it).x = ptr->x;
-				(*it).y = ptr->y;
-				(*it).z = ptr->z;
-				ptr++;
-				out++;
-			}
-			return out;
-		}
-		auto mid = beg + len/2;
-		auto ptr2 = ptr + len/2;
-		auto handle = std::async(std::launch::async, points_to_pclPart<RandomIt, RandomIt2>, division_num, ptr, beg, mid);
-		auto out = points_to_pclPart<RandomIt, RandomIt2>(division_num, ptr2, mid, end);
-		auto out1 = handle.get();
-
-		return out + out1;
-	}
 
 	template<typename PointT>
 	typename pcl::PointCloud<PointT>::Ptr points_to_pcl(const rs2::points &points)
@@ -754,22 +711,6 @@ namespace myFunction
 		auto sp = points.get_profile().as<rs2::video_stream_profile>();
 		
 		auto ptr = points.get_vertices();
-		/*////////////////////////////////////////////////////////////////////////
-		cloud->width = sp.width();
-		cloud->height = sp.height();
-		cloud->is_dense = false;
-		cloud->points.resize(points.size());
-
-		int count = points_to_pclPart(division_num, ptr, cloud->points.begin(), cloud->points.end());
-		/*for (auto& p : cloud->points)
-		{
-			p.x = ptr->x;
-			p.y = ptr->y;
-			p.z = ptr->z;
-			ptr++;
-		}*/
-		/////////////////////////////////////////////////////////////////////////
-		/////////////////////////////////////////////////////////////////////////
 		for(int i = 0; i < points.size(); i++)
 		{
 			if(fabs(ptr->x*ptr->y*ptr->z) != 0)
@@ -783,14 +724,13 @@ namespace myFunction
 			ptr++;
 		}
 
-		cloud->width = (int) cloud->points.size();
+		cloud->width = static_cast<uint32_t>(cloud->points.size());
 		cloud->height = 1;
-		/////////////////////////////////////////////////////////////////////////
 		return cloud;
 	}
 
 #pragma endregion points_to_pcl
-
+	*/
 #pragma region getChanges
 
 	template<typename PointT>
@@ -812,7 +752,7 @@ namespace myFunction
 			temp->points.push_back(cloud2->points[*it]);
 		}
 
-		temp->width = (int) temp->points.size();
+		temp->width = static_cast<uint32_t>(temp->points.size());
 		temp->height = 1;
 
 		return temp;
@@ -894,13 +834,14 @@ namespace myFunction
 
 #pragma endregion showCloud
 
-#pragma region millisecondToString
+#pragma region durationToString
 
-	std::string millisecondToString(const std::chrono::milliseconds &duration, const bool isFileName = true)
+	template<typename RandomIt>
+	std::string durationToString(const RandomIt &duration, const bool isFileName = true)
 	{
 		std::ostringstream stream;
 		std::chrono::time_point<std::chrono::system_clock> tp = std::chrono::time_point<std::chrono::system_clock>(duration);
-		tp += std::chrono::hours(8);
+		tp += std::chrono::hours(TIMEZONE);
 		auto dp = date::floor<date::days>(tp);  // dp is a sys_days, which is a
 										// type alias for a C::time_point
 		auto date = date::year_month_day{dp};
@@ -920,10 +861,18 @@ namespace myFunction
 		if(!isFileName) stream << '.';
 		else stream << '_';
 		stream << std::setfill('0') << std::setw(3) << time.subseconds().count();
+		if(typeid(RandomIt) == typeid(std::chrono::microseconds))
+		{
+			stream << std::setfill('0') << std::setw(3) << duration.count() % 1000;
+		}
+		if(typeid(RandomIt) == typeid(std::chrono::nanoseconds))
+		{
+			stream << std::setfill('0') << std::setw(3) << duration.count() % 1000000;
+		}
 		return stream.str();
 	}
 
-#pragma endregion millisecondToString
+#pragma endregion durationToString
 
 #pragma region getSimilarity
 
@@ -940,7 +889,7 @@ namespace myFunction
         octree.addPointsFromInputCloud ();
         octree.getPointIndicesFromNewVoxels (newPointIdxVector);
 
-        return 1 - ((double)newPointIdxVector.size() / (double)cloud2->points.size());
+        return 1 - (static_cast<double>(newPointIdxVector.size()) / static_cast<double>(cloud2->points.size()));
 	}
 
 #pragma endregion getSimilarity

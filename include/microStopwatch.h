@@ -1,19 +1,21 @@
 #ifndef MICROSTOPWATCH_H_
 #define MICROSTOPWATCH_H_
 
-#include "../include/function.h"
+#include "../include/basic_function.h"
 #include <boost/algorithm/string.hpp>
 
 namespace myClass
 {
     class MicroStopwatch
     {
-        boost::posix_time::ptime tictic;
-        boost::posix_time::ptime toctoc;
-        bool stoped;
+        private:
+            boost::posix_time::ptime tictic;
+            boost::posix_time::ptime toctoc;
+            std::string name;
+            bool stoped;
+
         public:
             int64_t elapsed;
-            std::string name;
             MicroStopwatch()
             {
                 elapsed = 0;
@@ -24,8 +26,17 @@ namespace myClass
                 elapsed = 0;
                 this->name = name;
             }
+            void rename(const std::string &name)
+            {
+                this->name = name;
+            }
             void tic()
             {
+                tictic = boost::posix_time::microsec_clock::local_time ();
+            }
+            void tic(const std::string &name)
+            {
+                this->rename(name);
                 tictic = boost::posix_time::microsec_clock::local_time ();
             }
             int64_t toc()
@@ -40,7 +51,7 @@ namespace myClass
             }
             void toc_print_string()
             {
-                std::cerr << this->name << ": "<< this->toc_string() << " us" <<  std::endl;
+                std::cout << this->name << ": "<< this->toc_string() << " us" <<  std::endl;
             }
             std::string elapsed_string()
             {
@@ -48,11 +59,15 @@ namespace myClass
             }
             void elapsed_print_string()
             {
-                std::cerr << this->name << ": "<< this->elapsed_string() << " us" <<  std::endl;
+                std::cout << this->name << ": "<< this->elapsed_string() << " us" <<  std::endl;
             }
             int64_t toc_pre()
             {
                 return (toctoc - tictic).total_microseconds();
+            }
+            std::string toc_pre_string()
+            {
+                return myFunction::commaFix((toctoc - tictic).total_microseconds());
             }
             void clear()
             {
@@ -60,17 +75,34 @@ namespace myClass
             }
             void start()
             {
-                if(this->stoped) this->elapsed = 0;
-                tictic = boost::posix_time::microsec_clock::local_time ();
+                if(this->stoped) this->clear();
+                this->tic();
+            }
+            void start(const std::string &name)
+            {
+                this->rename(name);
+                if(this->stoped) this->clear();
+                this->tic();
             }
             void pause()
             {
-                toctoc = boost::posix_time::microsec_clock::local_time ();
-                this->elapsed += (toctoc - tictic).total_microseconds();
+                this->elapsed += this->toc();
             }
             void stop()
             {
-                toctoc = boost::posix_time::microsec_clock::local_time ();
+                this->pause();
+                this->stoped = true;
+            }
+            void restart()
+            {
+                this->clear();
+                this->start();
+            }
+            void restart(const std::string &name)
+            {
+                this->rename(name);
+                this->clear();
+                this->start();
             }
             friend std::ostream& operator<<(std::ostream &out, MicroStopwatch &obj)
             {

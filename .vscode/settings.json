@@ -59,6 +59,8 @@
         "bitset": "cpp",
         "unordered_set": "cpp",
         "string_view": "cpp",
-        "filesystem": "cpp"
-    }
+        "filesystem": "cpp",
+        "slist": "cpp"
+    },
+    "cmake.configureOnOpen": true
 }
